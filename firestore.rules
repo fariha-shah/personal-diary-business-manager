@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function supported(name) {
+      return name in ['diaryEntries', 'expenses', 'loans', 'payments',
+        'paymentMethods', 'calculatorHistory', 'calendarEvents', 'properties',
+        'clients', 'followups', 'dashboardTasks', 'dashboardNotes',
+        'dashboardProperties', 'dashboardBuyers', 'dashboardDeals'];
+    }
+    match /users/{uid}/{name}/{id} {
+      allow read, delete: if owner(uid) && supported(name);
+      allow create, update: if owner(uid) && supported(name)
+        && request.resource.data.keys().size() <= 100;
+    }
+    match /users/{uid}/settings/profile {
+      allow read, delete: if owner(uid);
+      allow create, update: if owner(uid)
+        && request.resource.data.keys().hasOnly([
+          'profile', 'theme', 'notifications', 'security'
+        ]);
+    }
+  }
+}
